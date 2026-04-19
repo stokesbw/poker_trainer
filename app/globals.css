@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  --poker-bg: #0f1923;
+  --poker-surface: #1a2535;
+  --poker-border: #2a3a4a;
+}
+
+body {
+  background-color: var(--poker-bg);
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--poker-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--poker-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4a5a;
+}
+
+/* Range grid cells */
+.range-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(7px, 1vw, 10px);
+  font-weight: 600;
+  border-radius: 2px;
+  border: 1px solid;
+  cursor: default;
+  transition: all 0.1s;
+  user-select: none;
+}
