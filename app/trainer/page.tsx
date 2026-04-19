@@ -12,7 +12,9 @@ import { RANGE_GRID_RANKS } from "@/lib/poker/constants";
 import { getHandLabel, rangeToPercent, countCombos } from "@/lib/poker/range-utils";
 import { cn } from "@/lib/utils";
 import { POSITION_COLORS } from "@/lib/poker/constants";
-import { TrendingUp, Info, Check, X } from "lucide-react";
+import { TrendingUp, Info, Check, X, MousePointerClick } from "lucide-react";
+import { HandDetailPanel } from "@/components/poker/HandDetailPanel";
+import { getPushFoldBreakdown, type HandActionBreakdown } from "@/lib/poker/action-frequencies";
 
 const POSITIONS: Position[] = ["UTG", "UTG+1", "UTG+2", "LJ", "HJ", "CO", "BTN", "SB", "BB"];
 
@@ -33,6 +35,8 @@ export default function TrainerPage() {
   const [selectedStack, setSelectedStack] = useState(10);
   const [customStack, setCustomStack] = useState("");
   const [highlightedHand, setHighlightedHand] = useState<string | undefined>();
+  const [selectedHand, setSelectedHand] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<HandActionBreakdown | null>(null);
   const [quizMode, setQuizMode] = useState(false);
   const [quizHand, setQuizHand] = useState<string | null>(null);
   const [quizResult, setQuizResult] = useState<"correct" | "incorrect" | null>(null);
@@ -41,6 +45,11 @@ export default function TrainerPage() {
 
   const effectiveStack = customStack ? parseFloat(customStack) : selectedStack;
   const pushRange = getPushRange(selectedPosition, effectiveStack);
+
+  const handleHandClick = useCallback((hand: string) => {
+    setSelectedHand(hand);
+    setBreakdown(getPushFoldBreakdown(hand, selectedPosition, effectiveStack, pushRange));
+  }, [selectedPosition, effectiveStack, pushRange]);
   const pct = rangeToPercent(pushRange);
   const combos = countCombos(pushRange);
 
@@ -90,7 +99,7 @@ export default function TrainerPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Left Panel - Controls */}
         <div className="xl:col-span-1 flex flex-col gap-4">
           {/* Position Selector */}
@@ -289,7 +298,7 @@ export default function TrainerPage() {
           </div>
         </div>
 
-        {/* Right Panel - Range Grid */}
+        {/* Center Panel - Range Grid */}
         <div className="xl:col-span-2">
           <div className="bg-poker-surface rounded-xl border border-poker-border p-6">
             <div className="flex items-center justify-between mb-4">
@@ -318,6 +327,8 @@ export default function TrainerPage() {
             <RangeGrid
               range={pushRange}
               highlightHand={quizHand ?? highlightedHand}
+              selectedHand={selectedHand ?? undefined}
+              onHandClick={handleHandClick}
               showStats
               colorScheme="blue"
             />
@@ -337,6 +348,16 @@ export default function TrainerPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Right Panel - Hand Detail */}
+        <div className="xl:col-span-1">
+          <div className="sticky top-20">
+            <HandDetailPanel
+              breakdown={breakdown}
+              onClose={() => { setSelectedHand(null); setBreakdown(null); }}
+            />
           </div>
         </div>
       </div>

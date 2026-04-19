@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 interface RangeGridProps {
   range: RangeMap;
   highlightHand?: string;
+  selectedHand?: string;
   interactive?: boolean;
   onRangeChange?: (range: RangeMap) => void;
+  onHandClick?: (hand: string) => void;
   showStats?: boolean;
   className?: string;
   label?: string;
@@ -47,8 +49,10 @@ const COLOR_SCHEMES = {
 export function RangeGrid({
   range,
   highlightHand,
+  selectedHand,
   interactive = false,
   onRangeChange,
+  onHandClick,
   showStats = true,
   className,
   label,
@@ -59,6 +63,10 @@ export function RangeGrid({
 
   const handleCellClick = useCallback(
     (hand: string) => {
+      if (onHandClick) {
+        onHandClick(hand);
+        return;
+      }
       if (!interactive || !onRangeChange) return;
       const current = range[hand] ?? 0;
       const newRange = { ...range };
@@ -66,7 +74,7 @@ export function RangeGrid({
       else if (current === 1) delete newRange[hand];
       onRangeChange(newRange);
     },
-    [interactive, onRangeChange, range]
+    [interactive, onRangeChange, onHandClick, range]
   );
 
   const combos = countCombos(range);
@@ -83,12 +91,14 @@ export function RangeGrid({
             const hand = getHandLabel(row, col);
             const freq = range[hand] ?? 0;
             const isHighlighted = highlightHand === hand;
+            const isSelected = selectedHand === hand;
             const isHovered = hoveredHand === hand;
             const isPair = row === col;
             const isSuited = row < col;
 
             let cellClass = colors.empty;
-            if (isHighlighted) cellClass = colors.highlight;
+            if (isSelected) cellClass = "bg-yellow-400 border-yellow-300 text-black ring-2 ring-yellow-300";
+            else if (isHighlighted) cellClass = colors.highlight;
             else if (freq === 1) cellClass = colors.full;
             else if (freq > 0) cellClass = colors.partial;
 
@@ -99,7 +109,7 @@ export function RangeGrid({
                   "relative flex items-center justify-center border rounded-sm cursor-default transition-all duration-100",
                   "text-[9px] font-semibold leading-none select-none",
                   cellClass,
-                  interactive && "cursor-pointer",
+                  (interactive || onHandClick) && "cursor-pointer",
                   isHovered && freq > 0 && "opacity-80",
                   isPair && "ring-inset ring-1 ring-white ring-opacity-20"
                 )}

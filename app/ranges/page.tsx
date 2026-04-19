@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import type { Position } from "@/lib/poker/types";
+import { useState, useCallback } from "react";
 import { RangeGrid } from "@/components/poker/RangeGrid";
-import { OPEN_RAISE_RANGES } from "@/lib/poker/range-utils";
+import { HandDetailPanel } from "@/components/poker/HandDetailPanel";
 import { MTT_SPOTS } from "@/data/mtt-spots";
+import { getHandActionBreakdown, type HandActionBreakdown } from "@/lib/poker/action-frequencies";
 import { cn } from "@/lib/utils";
-import { Layers, ChevronDown } from "lucide-react";
+import { Layers, MousePointerClick } from "lucide-react";
 import { POSITION_COLORS } from "@/lib/poker/constants";
 import { rangeToPercent, countCombos } from "@/lib/poker/range-utils";
 
@@ -33,6 +33,8 @@ export default function RangesPage() {
   const [activeCategory, setActiveCategory] = useState("push-fold");
   const [activeSpotId, setActiveSpotId] = useState(MTT_SPOTS[0].id);
   const [stackFilter, setStackFilter] = useState(0);
+  const [selectedHand, setSelectedHand] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<HandActionBreakdown | null>(null);
 
   const filter = STACK_FILTERS[stackFilter];
   const filteredSpots = MTT_SPOTS.filter(
@@ -48,6 +50,18 @@ export default function RangesPage() {
   const pct = activeSpot ? rangeToPercent(activeSpot.heroRange) : 0;
   const combos = activeSpot ? countCombos(activeSpot.heroRange) : 0;
 
+  const handleHandClick = useCallback((hand: string) => {
+    if (!activeSpot) return;
+    setSelectedHand(hand);
+    setBreakdown(getHandActionBreakdown(hand, activeSpot));
+  }, [activeSpot]);
+
+  const handleSpotChange = (spotId: string) => {
+    setActiveSpotId(spotId);
+    setSelectedHand(null);
+    setBreakdown(null);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -56,7 +70,7 @@ export default function RangesPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-white">Range Library</h1>
-          <p className="text-gray-400 text-sm">Pre-solved GTO ranges for MTT spots</p>
+          <p className="text-gray-400 text-sm">Click any hand to see fold / call / raise frequencies</p>
         </div>
       </div>
 
@@ -68,7 +82,7 @@ export default function RangesPage() {
             onClick={() => {
               setActiveCategory(cat.id);
               const firstSpot = MTT_SPOTS.find((s) => s.category === cat.id);
-              if (firstSpot) setActiveSpotId(firstSpot.id);
+              if (firstSpot) handleSpotChange(firstSpot.id);
             }}
             className={cn(
               "px-4 py-2 rounded-xl text-sm font-semibold border transition-all",
@@ -80,9 +94,7 @@ export default function RangesPage() {
             {cat.label}
           </button>
         ))}
-
-        {/* Stack Filter */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto">
           <select
             value={stackFilter}
             onChange={(e) => setStackFilter(Number(e.target.value))}
@@ -95,23 +107,21 @@ export default function RangesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Spot List */}
         <div className="lg:col-span-1">
           <div className="bg-poker-surface rounded-xl border border-poker-border p-4">
             <div className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
               {filteredSpots.length} Spots
             </div>
-            <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1">
               {filteredSpots.length === 0 && (
-                <div className="text-gray-500 text-sm italic py-4 text-center">
-                  No spots match this filter
-                </div>
+                <div className="text-gray-500 text-sm italic py-4 text-center">No spots match this filter</div>
               )}
               {filteredSpots.map((spot) => (
                 <button
                   key={spot.id}
-                  onClick={() => setActiveSpotId(spot.id)}
+                  onClick={() => handleSpotChange(spot.id)}
                   className={cn(
                     "text-left p-3 rounded-xl border transition-all",
                     activeSpotId === spot.id
@@ -140,75 +150,66 @@ export default function RangesPage() {
           </div>
         </div>
 
-        {/* Range Display */}
+        {/* Range Grid */}
         <div className="lg:col-span-2">
           {activeSpot ? (
             <div className="flex flex-col gap-4">
               {/* Spot Header */}
-              <div className="bg-poker-surface rounded-xl border border-poker-border p-5">
+              <div className="bg-poker-surface rounded-xl border border-poker-border p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h2 className="text-xl font-bold text-white">{activeSpot.name}</h2>
-                    <p className="text-gray-400 text-sm mt-1">{activeSpot.description}</p>
+                    <h2 className="text-lg font-bold text-white">{activeSpot.name}</h2>
+                    <p className="text-gray-400 text-xs mt-0.5">{activeSpot.description}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span
-                      className="text-sm font-semibold px-3 py-1 rounded-full"
-                      style={{
-                        color: POSITION_COLORS[activeSpot.position],
-                        backgroundColor: POSITION_COLORS[activeSpot.position] + "22",
-                        border: `1px solid ${POSITION_COLORS[activeSpot.position]}44`,
-                      }}
-                    >
-                      {activeSpot.position}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {activeSpot.stackDepthBB}BB effective
-                    </span>
-                  </div>
+                  <span
+                    className="text-sm font-semibold px-3 py-1 rounded-full shrink-0 ml-3"
+                    style={{
+                      color: POSITION_COLORS[activeSpot.position],
+                      backgroundColor: POSITION_COLORS[activeSpot.position] + "22",
+                      border: `1px solid ${POSITION_COLORS[activeSpot.position]}44`,
+                    }}
+                  >
+                    {activeSpot.position}
+                  </span>
                 </div>
-
-                {/* Stats row */}
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="bg-poker-bg rounded-lg px-3 py-2">
+                <div className="flex items-center gap-3 text-sm flex-wrap">
+                  <div className="bg-poker-bg rounded-lg px-3 py-1.5">
                     <span className="text-green-400 font-bold">{pct.toFixed(1)}%</span>
-                    <span className="text-gray-400 ml-1">of hands</span>
+                    <span className="text-gray-400 ml-1 text-xs">of hands</span>
                   </div>
-                  <div className="bg-poker-bg rounded-lg px-3 py-2">
+                  <div className="bg-poker-bg rounded-lg px-3 py-1.5">
                     <span className="text-blue-400 font-bold">{combos.toFixed(0)}</span>
-                    <span className="text-gray-400 ml-1">combos</span>
+                    <span className="text-gray-400 ml-1 text-xs">combos</span>
                   </div>
-                  <div className="bg-poker-bg rounded-lg px-3 py-2">
+                  <div className="bg-poker-bg rounded-lg px-3 py-1.5">
                     <span className="text-yellow-400 font-bold capitalize">{activeSpot.gtoAction}</span>
-                    <span className="text-gray-400 ml-1">GTO action</span>
+                    <span className="text-gray-400 ml-1 text-xs">GTO action</span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
+                    <MousePointerClick size={12} />
+                    Click any hand for breakdown
                   </div>
                 </div>
               </div>
 
-              {/* Range Grid */}
-              <div className="bg-poker-surface rounded-xl border border-poker-border p-5">
+              {/* Grid */}
+              <div className="bg-poker-surface rounded-xl border border-poker-border p-4">
                 <RangeGrid
                   range={activeSpot.heroRange}
+                  selectedHand={selectedHand ?? undefined}
+                  onHandClick={handleHandClick}
                   showStats
                   colorScheme="green"
-                  label={`${activeSpot.position} Range - ${activeSpot.name}`}
                 />
               </div>
 
               {/* Explanation */}
-              <div className="bg-poker-surface rounded-xl border border-poker-border p-5">
-                <div className="text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">
-                  GTO Explanation
-                </div>
-                <p className="text-gray-300 text-sm leading-relaxed">
-                  {activeSpot.explanation}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
+              <div className="bg-poker-surface rounded-xl border border-poker-border p-4">
+                <div className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wide">GTO Explanation</div>
+                <p className="text-gray-300 text-sm leading-relaxed">{activeSpot.explanation}</p>
+                <div className="flex flex-wrap gap-1.5 mt-3">
                   {activeSpot.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs bg-poker-bg text-gray-400 border border-poker-border px-2 py-1 rounded-lg"
-                    >
+                    <span key={tag} className="text-xs bg-poker-bg text-gray-400 border border-poker-border px-2 py-0.5 rounded-lg">
                       {tag}
                     </span>
                   ))}
@@ -220,6 +221,16 @@ export default function RangesPage() {
               Select a spot from the left panel
             </div>
           )}
+        </div>
+
+        {/* Hand Detail Panel */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-20">
+            <HandDetailPanel
+              breakdown={breakdown}
+              onClose={() => { setSelectedHand(null); setBreakdown(null); }}
+            />
+          </div>
         </div>
       </div>
     </div>
