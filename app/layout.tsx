@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "PokerTrainer MTT - GTO Study Tool",
@@ -20,6 +21,7 @@ export default function RootLayout({
         <main className="pt-14 min-h-screen">
           {children}
         </main>
+        <Analytics />
       </body>
     </html>
   );
